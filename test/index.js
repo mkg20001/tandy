@@ -1753,8 +1753,8 @@ describe('Tandy', () => {
         const result = response.result;
 
         expect(response.statusCode).to.equal(200);
-        expect(result.tokens).to.be.an.array();
-        expect(result.tokens.length).to.equal(1);
+        expect(result).to.be.an.array();
+        expect(result.length).to.equal(1);
     });
 
     it('Fetches tokens for a user, sorted by token id', async () => {
@@ -1786,9 +1786,9 @@ describe('Tandy', () => {
         const result = response.result;
 
         expect(response.statusCode).to.equal(200);
-        expect(result.tokens).to.be.an.array();
-        expect(result.tokens.length).to.equal(2);
-        expect(result.tokens[0].temp).to.equal('text');
+        expect(result).to.be.an.array();
+        expect(result.length).to.equal(2);
+        expect(result[0].temp).to.equal('text');
     });
 
     it('Fetches limited number of tokens for a user using query param', async () => {
@@ -1826,8 +1826,8 @@ describe('Tandy', () => {
         const result = response.result;
 
         expect(response.statusCode).to.equal(200);
-        expect(result.tokens).to.be.an.array();
-        expect(result.tokens.length).to.equal(1);
+        expect(result).to.be.an.array();
+        expect(result.length).to.equal(1);
     });
     it('Fetches users, but skips first one', async () => {
 
@@ -2085,6 +2085,14 @@ describe('Tandy', () => {
         await knex.seed.run({ directory: 'test/seeds' });
         server.route({
             method: 'GET',
+            path: '/user',
+            config: {
+                auth: { strategy: 'mine' }
+            },
+            handler: { tandy: {} }
+        });
+        server.route({
+            method: 'GET',
             path: '/user/tokens',
             config: {
                 auth: { strategy: 'mine' }
@@ -2094,7 +2102,7 @@ describe('Tandy', () => {
 
         const options = {
             method: 'GET',
-            url: '/user/tokens',
+            url: '/user',
             headers: { authorization: 'dontcare' }
         };
         const response = await server.inject(options);
@@ -2103,6 +2111,18 @@ describe('Tandy', () => {
         expect(response.statusCode).to.equal(200);
         expect(result).to.be.an.object();
         expect(result.id).to.equal(1);
+
+        const options2 = {
+            method: 'GET',
+            url: '/user/tokens',
+            headers: { authorization: 'dontcare' }
+        };
+        const response2 = await server.inject(options2);
+        const result2 = response2.result;
+
+        expect(response2.statusCode).to.equal(200);
+        expect(result2).to.be.an.array();
+        expect(result2.length).to.equal(2);
     });
     it('Fetches current user with bad credentials', async () => {
 
@@ -2276,8 +2296,79 @@ describe('Tandy', () => {
         const result = response.result;
 
         expect(response.statusCode).to.equal(200);
-        expect(result.tokens).to.be.an.array();
-        expect(result.tokens.length).to.equal(2);
+        expect(result).to.be.an.array();
+        expect(result.length).to.equal(2);
+    });
+    it('Fetches a specific user with tokens and includes total count', async () => {
+
+        const server = await getServer(getOptions({
+            tandy: {
+                includeTotalCount: true
+            }
+        }));
+        server.registerModel([
+            TestModels.Users,
+            TestModels.Tokens
+        ]);
+
+        await server.initialize();
+
+        const knex = server.knex();
+        await knex.seed.run({ directory: 'test/seeds' });
+
+        server.route({
+            method: 'GET',
+            path: '/users/{id}/tokens',
+            handler: { tandy: {} }
+        });
+
+        const options = {
+            method: 'GET',
+            url: '/users/1/tokens'
+        };
+        const response = await server.inject(options);
+        const result = response.result;
+
+        expect(response.statusCode).to.equal(200);
+        expect(response.headers['content-range']).to.equal('tokens 0-2/2');
+        expect(result).to.be.an.array();
+        expect(result.length).to.equal(2);
+    });
+    it('Fetches a specific user with tokens and includes total count, custom header', async () => {
+
+        const server = await getServer(getOptions({
+            tandy: {
+                includeTotalCount: true,
+                totalCountHeader: 'x-count'
+            }
+        }));
+        server.registerModel([
+            TestModels.Users,
+            TestModels.Tokens
+        ]);
+
+        await server.initialize();
+
+        const knex = server.knex();
+        await knex.seed.run({ directory: 'test/seeds' });
+
+        server.route({
+            method: 'GET',
+            path: '/users/{id}/tokens',
+            handler: { tandy: {} }
+        });
+
+        const options = {
+            method: 'GET',
+            url: '/users/1/tokens'
+        };
+        const response = await server.inject(options);
+        const result = response.result;
+
+        expect(response.statusCode).to.equal(200);
+        expect(response.headers['x-count']).to.equal('2');
+        expect(result).to.be.an.array();
+        expect(result.length).to.equal(2);
     });
     it('Generates an Objection error when populating', async () => {
 
@@ -2410,8 +2501,8 @@ describe('Tandy', () => {
         const result = response.result;
 
         expect(response.statusCode).to.equal(200);
-        expect(result.tokens).to.be.an.array();
-        expect(result.tokens.length).to.equal(2);
+        expect(result).to.be.an.array();
+        expect(result.length).to.equal(2);
     });
     it('Leaves `associationAttr` null', async () => {
 
@@ -2521,8 +2612,8 @@ describe('Tandy', () => {
         const result = response.result;
 
         expect(response.statusCode).to.equal(200);
-        expect(result.tokens).to.be.an.array();
-        expect(result.tokens.length).to.equal(0);
+        expect(result).to.be.an.array();
+        expect(result.length).to.equal(0);
     });
     it('Adds a token to a user with PUT', async () => {
 
